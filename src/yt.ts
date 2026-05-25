@@ -216,7 +216,7 @@ function criarArquivoTemporario(): { base: string; audioPath: string } {
 }
 
 function baixarAudio(url: string): { audioPath: string } | { error: string; details?: string } {
-  const check = spawnSync("yt-dlp", ["--version"], { encoding: "utf-8" })
+  const check = spawnSync("python3", ["-m", "yt_dlp", "--version"], { encoding: "utf-8" })
   if (check.error) {
     const message = "yt-dlp não encontrado no container ou na máquina."
     log("erro", message)
@@ -232,6 +232,8 @@ function baixarAudio(url: string): { audioPath: string } | { error: string; deta
   log("info", "Baixando áudio do vídeo...")
 
   const args = [
+    "-m",
+    "yt_dlp",
     "-f",
     "bestaudio/best",
     "--extract-audio",
@@ -254,7 +256,7 @@ function baixarAudio(url: string): { audioPath: string } | { error: string; deta
 
   args.push(url)
 
-  const resultado = spawnSync("yt-dlp", args, { encoding: "utf-8", stdio: "pipe" })
+  const resultado = spawnSync("python3", args, { encoding: "utf-8", stdio: "pipe" })
 
   if (resultado.status !== 0) {
     const message = "Falha ao baixar áudio do vídeo."
