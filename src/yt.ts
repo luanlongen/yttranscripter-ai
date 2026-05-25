@@ -99,6 +99,13 @@ function jsonResponse(
   res.end(JSON.stringify(payload, null, 2))
 }
 
+function textResponse(res: ServerResponse, statusCode: number, message: string): void {
+  res.writeHead(statusCode, {
+    "Content-Type": "text/plain; charset=utf-8"
+  })
+  res.end(message)
+}
+
 async function readRequestBody(req: IncomingMessage, maxBytes = 1_000_000): Promise<string> {
   return await new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
@@ -147,12 +154,15 @@ async function transcreverViaLegendas(videoId: string): Promise<{ transcript: st
         const segmentos = await YoutubeTranscript.fetchTranscript(videoId, opcoes)
 
         if (segmentos && segmentos.length > 0) {
+          log("info", `youtube-transcript funcionou${lang ? ` (idioma: ${lang})` : ""}`)
           return {
             transcript: segmentos.map(segmento => segmento.text.trim()).join(" "),
             language: lang
           }
         }
-      } catch {
+      } catch (error) {
+        const detalhes = error instanceof Error ? error.message : String(error)
+        log("aviso", `youtube-transcript falhou${lang ? ` (idioma: ${lang})` : ""}: ${detalhes}`)
         continue
       }
     }
@@ -172,11 +182,12 @@ function criarArquivoTemporario(): { base: string; audioPath: string } {
   }
 }
 
-function baixarAudio(url: string): string | null {
+function baixarAudio(url: string): { audioPath: string } | { error: string; details?: string } {
   const check = spawnSync("yt-dlp", ["--version"], { encoding: "utf-8" })
   if (check.error) {
-    log("erro", "yt-dlp não encontrado no container ou na máquina.")
-    return null
+    const message = "yt-dlp não encontrado no container ou na máquina."
+    log("erro", message)
+    return { error: message, details: check.error.message }
   }
 
   const { base, audioPath } = criarArquivoTemporario()
@@ -206,18 +217,20 @@ function baixarAudio(url: string): string | null {
   )
 
   if (resultado.status !== 0) {
-    log("erro", `Falha ao baixar áudio:\n${resultado.stderr}`)
-    return null
+    const message = "Falha ao baixar áudio do vídeo."
+    log("erro", `${message}\n${resultado.stderr}`)
+    return { error: message, details: resultado.stderr || resultado.stdout || "yt-dlp retornou erro desconhecido." }
   }
 
   if (!fs.existsSync(audioPath)) {
-    log("erro", "Arquivo de áudio não encontrado após o download.")
-    return null
+    const message = "Arquivo de áudio não encontrado após o download."
+    log("erro", message)
+    return { error: message }
   }
 
   const tamanhoMB = fs.statSync(audioPath).size / (1024 * 1024)
   log("info", `Áudio baixado: ${tamanhoMB.toFixed(1)} MB`)
-  return audioPath
+  return { audioPath }
 }
 
 async function chamarOpenRouter(
@@ -339,14 +352,18 @@ async function transcreverUrlDoYoutube(
   }
 
   log("info", "Legendas não disponíveis. Usando OpenRouter (Whisper Large V3)...")
-  const audioPath = baixarAudio(url)
+  const audioResultado = baixarAudio(url)
 
-  if (!audioPath) {
-    return { ok: false, error: "Não foi possível baixar o áudio do vídeo." }
+  if ("error" in audioResultado) {
+    return {
+      ok: false,
+      error: audioResultado.error,
+      details: audioResultado.details
+    }
   }
 
   try {
-    const resultadoOpenRouter = await transcreverViaOpenRouter(audioPath, languageOpenRouter)
+    const resultadoOpenRouter = await transcreverViaOpenRouter(audioResultado.audioPath, languageOpenRouter)
 
     if (!resultadoOpenRouter) {
       return { ok: false, error: "Não foi possível transcrever o vídeo por nenhum método." }
@@ -364,7 +381,7 @@ async function transcreverUrlDoYoutube(
     }
   } finally {
     try {
-      fs.unlinkSync(audioPath)
+      fs.unlinkSync(audioResultado.audioPath)
     } catch {
       // ignore cleanup failures
     }
@@ -378,17 +395,17 @@ function isJsonRequest(req: IncomingMessage): boolean {
 
 async function handleTranscribe(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
   if (!AUTH_BEARER_KEY) {
-    jsonResponse(res, 500, { ok: false, error: "AUTH_BEARER_KEY não configurada no servidor." })
+    textResponse(res, 500, "AUTH_BEARER_KEY não configurada no servidor.")
     return
   }
 
   if (!isAuthorized(req)) {
-    jsonResponse(res, 401, { ok: false, error: "Unauthorized. Envie Authorization: Bearer <sua-chave>." })
+    textResponse(res, 401, "Unauthorized. Envie Authorization: Bearer <sua-chave>.")
     return
   }
 
   if (req.method !== "POST") {
-    jsonResponse(res, 405, { ok: false, error: "Use POST nesta rota." })
+    textResponse(res, 405, "Use POST nesta rota.")
     return
   }
 
@@ -397,11 +414,9 @@ async function handleTranscribe(req: IncomingMessage, res: ServerResponse, url: 
   try {
     bodyText = await readRequestBody(req)
   } catch (error) {
-    jsonResponse(res, 400, {
-      ok: false,
-      error: "Falha ao ler o corpo da requisição.",
-      details: error instanceof Error ? error.message : String(error)
-    })
+    const detalhes = error instanceof Error ? error.message : String(error)
+    log("erro", `Falha ao ler o corpo da requisição: ${detalhes}`)
+    textResponse(res, 400, "Falha ao ler o corpo da requisição.")
     return
   }
 
@@ -410,13 +425,13 @@ async function handleTranscribe(req: IncomingMessage, res: ServerResponse, url: 
   try {
     body = JSON.parse(bodyText) as { url?: unknown; download?: unknown; language_openrouter?: unknown }
   } catch {
-    jsonResponse(res, 400, { ok: false, error: "Body inválido. Envie JSON com a propriedade url." })
+    textResponse(res, 400, "Body inválido. Envie JSON com a propriedade url.")
     return
   }
 
   const urlValue = typeof body.url === "string" ? body.url.trim() : ""
   if (!urlValue) {
-    jsonResponse(res, 400, { ok: false, error: "A propriedade url é obrigatória." })
+    textResponse(res, 400, "A propriedade url é obrigatória.")
     return
   }
 
@@ -428,7 +443,9 @@ async function handleTranscribe(req: IncomingMessage, res: ServerResponse, url: 
   const resultado = await transcreverUrlDoYoutube(urlValue, languageOpenRouter)
 
   if (!resultado.ok) {
-    jsonResponse(res, 500, resultado)
+    const detalhes = resultado.details ? ` | details: ${resultado.details}` : ""
+    log("erro", `Falha na transcrição: ${resultado.error}${detalhes}`)
+    textResponse(res, 500, resultado.error)
     return
   }
 
