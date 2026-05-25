@@ -1,0 +1,12 @@
+services:
+  yt-transcriber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "6969:6969"
+    environment:
+      PORT: 6969
+    restart: unless-stopped
