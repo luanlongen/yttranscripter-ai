@@ -147,23 +147,56 @@ async function transcreverViaLegendas(videoId: string): Promise<{ transcript: st
   try {
     const { YoutubeTranscript } = await import("youtube-transcript")
     const idiomas = ["pt", "pt-BR", "pt-PT", "en", "en-US"]
+    const maxTentativas = 3
+    const delayMs = 1000
 
     for (const lang of [...idiomas, undefined]) {
-      try {
-        const opcoes = lang ? { lang } : {}
-        const segmentos = await YoutubeTranscript.fetchTranscript(videoId, opcoes)
+      let ultimoErro = ""
 
-        if (segmentos && segmentos.length > 0) {
-          log("info", `youtube-transcript funcionou${lang ? ` (idioma: ${lang})` : ""}`)
-          return {
-            transcript: segmentos.map(segmento => segmento.text.trim()).join(" "),
-            language: lang
+      for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+        try {
+          const opcoes = lang
+            ? {
+                lang,
+                requestOptions: {
+                  headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                  }
+                }
+              }
+            : {
+                requestOptions: {
+                  headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                  }
+                }
+              }
+
+          const segmentos = await YoutubeTranscript.fetchTranscript(videoId, opcoes)
+
+          if (segmentos && segmentos.length > 0) {
+            log("info", `youtube-transcript funcionou${lang ? ` (idioma: ${lang})` : ""}`)
+            return {
+              transcript: segmentos.map(segmento => segmento.text.trim()).join(" "),
+              language: lang
+            }
+          }
+        } catch (error) {
+          ultimoErro = error instanceof Error ? error.message : String(error)
+
+          if (tentativa < maxTentativas) {
+            log(
+              "aviso",
+              `youtube-transcript tentativa ${tentativa}/${maxTentativas} falhou${lang ? ` (idioma: ${lang})` : ""}, aguardando ${delayMs}ms...`
+            )
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+          } else {
+            log(
+              "aviso",
+              `youtube-transcript falhou após ${maxTentativas} tentativas${lang ? ` (idioma: ${lang})` : ""}: ${ultimoErro}`
+            )
           }
         }
-      } catch (error) {
-        const detalhes = error instanceof Error ? error.message : String(error)
-        log("aviso", `youtube-transcript falhou${lang ? ` (idioma: ${lang})` : ""}: ${detalhes}`)
-        continue
       }
     }
   } catch {
