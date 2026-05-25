@@ -198,23 +198,30 @@ function baixarAudio(url: string): { audioPath: string } | { error: string; deta
 
   log("info", "Baixando áudio do vídeo...")
 
-  const resultado = spawnSync(
-    "yt-dlp",
-    [
-      "-f",
-      "bestaudio/best",
-      "--extract-audio",
-      "--audio-format",
-      "mp3",
-      "--audio-quality",
-      "64K",
-      "-o",
-      `${base}.%(ext)s`,
-      "--no-playlist",
-      url
-    ],
-    { encoding: "utf-8", stdio: "pipe" }
-  )
+  const args = [
+    "-f",
+    "bestaudio/best",
+    "--extract-audio",
+    "--audio-format",
+    "mp3",
+    "--audio-quality",
+    "64K",
+    "-o",
+    `${base}.%(ext)s`,
+    "--no-playlist"
+  ]
+
+  const cookiesPath = "/app/cookies.txt"
+  if (fs.existsSync(cookiesPath)) {
+    args.push("--cookies", cookiesPath)
+    log("info", "Usando cookies.txt para autenticação")
+  } else {
+    log("aviso", "cookies.txt não encontrado, tentando sem autenticação")
+  }
+
+  args.push(url)
+
+  const resultado = spawnSync("yt-dlp", args, { encoding: "utf-8", stdio: "pipe" })
 
   if (resultado.status !== 0) {
     const message = "Falha ao baixar áudio do vídeo."
