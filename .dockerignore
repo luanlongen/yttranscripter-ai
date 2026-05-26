@@ -24,7 +24,6 @@ tests
 __tests__
 .DS_Store
 Thumbs.db
-cookies.txt
 storage
 .actorignore
 .actignore

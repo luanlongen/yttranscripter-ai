@@ -139,10 +139,14 @@ function downloadAudio(url: string): { audioPath: string } | { error: string; de
     "64K",
     "-o",
     `${base}.%(ext)s`,
-    "--no-playlist"
+    "--no-playlist",
+    "--js-runtimes",
+    "node",
+    "--extractor-args",
+    "youtube:player_client=android"
   ]
 
-  const cookiesPath = "/app/cookies.txt"
+  const cookiesPath = path.join(process.cwd(), "cookies.txt")
   if (fs.existsSync(cookiesPath)) {
     args.push("--cookies", cookiesPath)
     log("info", "Using cookies.txt for authentication")
