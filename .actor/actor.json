@@ -42,6 +42,7 @@
     "required": ["youtubeUrl"]
   },
   "output": {
+    "actorOutputSchemaVersion": 1,
     "contentType": "application/json",
     "schema": {
       "type": "object",
