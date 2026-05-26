@@ -146,14 +146,6 @@ function downloadAudio(url: string): { audioPath: string } | { error: string; de
     "youtube:player_client=android"
   ]
 
-  const cookiesPath = path.join(process.cwd(), "cookies.txt")
-  if (fs.existsSync(cookiesPath)) {
-    args.push("--cookies", cookiesPath)
-    log("info", "Using cookies.txt for authentication")
-  } else {
-    log("warn", "cookies.txt not found, trying without authentication")
-  }
-
   args.push(url)
 
   const result = spawnSync("python3", args, { encoding: "utf-8", stdio: "pipe" })
