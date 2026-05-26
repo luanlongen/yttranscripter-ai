@@ -1,10 +1,5 @@
 FROM apify/actor-node:20
 
-# Install system dependencies if needed
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy package files
 COPY package*.json ./
 
