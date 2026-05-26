@@ -1,0 +1,14 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "YouTube Transcriber Output",
+  "description": "Extracted transcript from YouTube video stored in the default dataset",
+  "type": "object",
+  "properties": {
+    "transcripts": {
+      "type": "string",
+      "title": "Transcripts",
+      "description": "Complete transcripts extracted from YouTube videos",
+      "template": "{{links.apiDefaultDatasetUrl}}/items"
+    }
+  }
+}
