@@ -4,25 +4,25 @@
 // 1. USAR VIA NODE.JS COM APIFY CLIENT
 // ============================================
 
-import { ApifyClient } from "apify-client";
+import { ApifyClient } from "apify-client"
 
 async function example1_callActorWithApifyClient() {
   const client = new ApifyClient({
-    token: "seu_token_apify_aqui",
-  });
+    token: "seu_token_apify_aqui"
+  })
 
   // Chamar o actor e esperar por ele
   const run = await client.actor("seu_username/youtube-transcript-wrapper").call({
     videoId: "dQw4w9WgXcQ", // Rick Roll ID
     metadata: true,
-    apifyToken: "seu_token_apify_aqui",
-  });
+    apifyToken: "seu_token_apify_aqui"
+  })
 
   // Obter os resultados do dataset
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  const { items } = await client.dataset(run.defaultDatasetId).listItems()
 
-  console.log("Transcrições obtidas:", items);
-  return items;
+  console.log("Transcrições obtidas:", items)
+  return items
 }
 
 // ============================================
@@ -30,43 +30,40 @@ async function example1_callActorWithApifyClient() {
 // ============================================
 
 async function example2_callActorViaHTTP() {
-  const ACTOR_ID = "seu_username/youtube-transcript-wrapper";
-  const API_TOKEN = "seu_token_apify_aqui";
+  const ACTOR_ID = "seu_username/youtube-transcript-wrapper"
+  const API_TOKEN = "seu_token_apify_aqui"
 
   const response = await fetch(`https://api.apify.com/v2/acts/${ACTOR_ID}/runs`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${API_TOKEN}`,
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${API_TOKEN}`,
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
       videoId: "dQw4w9WgXcQ",
       metadata: true,
-      apifyToken: API_TOKEN,
-    }),
-  });
+      apifyToken: API_TOKEN
+    })
+  })
 
-  const run = await response.json();
-  console.log("Run criado:", run.id);
+  const run = await response.json()
+  console.log("Run criado:", run.id)
 
   // Aguardar conclusão (polling)
-  let status = "RUNNING";
+  let status = "RUNNING"
   while (status === "RUNNING") {
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Espera 1 segundo
+    await new Promise(resolve => setTimeout(resolve, 1000)) // Espera 1 segundo
 
-    const statusResponse = await fetch(
-      `https://api.apify.com/v2/acts/${ACTOR_ID}/runs/${run.id}`,
-      {
-        headers: { "Authorization": `Bearer ${API_TOKEN}` },
-      }
-    );
+    const statusResponse = await fetch(`https://api.apify.com/v2/acts/${ACTOR_ID}/runs/${run.id}`, {
+      headers: { Authorization: `Bearer ${API_TOKEN}` }
+    })
 
-    const runData = await statusResponse.json();
-    status = runData.status;
-    console.log("Status:", status);
+    const runData = await statusResponse.json()
+    status = runData.status
+    console.log("Status:", status)
   }
 
-  return run.id;
+  return run.id
 }
 
 // ============================================
@@ -75,29 +72,29 @@ async function example2_callActorViaHTTP() {
 
 async function example3_getDatasetResults() {
   const client = new ApifyClient({
-    token: "seu_token_apify_aqui",
-  });
+    token: "seu_token_apify_aqui"
+  })
 
-  const ACTOR_ID = "seu_username/youtube-transcript-wrapper";
-  const RUN_ID = "seu_run_id_aqui"; // Obtido após chamar o actor
+  const ACTOR_ID = "seu_username/youtube-transcript-wrapper"
+  const RUN_ID = "seu_run_id_aqui" // Obtido após chamar o actor
 
   // Obter informações da execução
-  const run = await client.actor(ACTOR_ID).call();
+  const run = await client.actor(ACTOR_ID).call()
 
   // Obter OUTPUT específico
-  const kvStore = await client.keyValueStore(run.defaultKeyValueStoreId);
-  const output = await kvStore.getValue("OUTPUT");
+  const kvStore = await client.keyValueStore(run.defaultKeyValueStoreId)
+  const output = await kvStore.getValue("OUTPUT")
 
-  console.log("Output completo:", output);
+  console.log("Output completo:", output)
 
   // Se success === true
   if (output?.success) {
-    console.log("Video ID:", output.videoId);
-    console.log("Itens encontrados:", output.itemsCount);
-    console.log("Items:", output.items);
-    console.log("Metadata:", output.metadata);
+    console.log("Video ID:", output.videoId)
+    console.log("Itens encontrados:", output.itemsCount)
+    console.log("Items:", output.items)
+    console.log("Metadata:", output.metadata)
   } else {
-    console.error("Erro:", output?.error);
+    console.error("Erro:", output?.error)
   }
 }
 
@@ -105,46 +102,46 @@ async function example3_getDatasetResults() {
 // 4. INTEGRAÇÃO COM EXPRESS (WEBHOOK)
 // ============================================
 
-import express from "express";
+import express from "express"
 
-const app = express();
-app.use(express.json());
+const app = express()
+app.use(express.json())
 
 // Endpoint que dispara o actor
 app.post("/api/transcribe", async (req, res) => {
-  const { videoId, metadata = true, apifyToken } = req.body;
+  const { videoId, metadata = true, apifyToken } = req.body
 
   // Validar input
   if (!videoId || !apifyToken) {
     return res.status(400).json({
-      error: "Missing videoId or apifyToken",
-    });
+      error: "Missing videoId or apifyToken"
+    })
   }
 
   try {
-    const client = new ApifyClient({ token: apifyToken });
+    const client = new ApifyClient({ token: apifyToken })
 
     const run = await client.actor("seu_username/youtube-transcript-wrapper").call({
       videoId,
       metadata,
-      apifyToken,
-    });
+      apifyToken
+    })
 
     // Obter resultado
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const { items } = await client.dataset(run.defaultDatasetId).listItems()
 
     res.json({
       success: true,
       runId: run.id,
       itemsCount: items.length,
-      items,
-    });
+      items
+    })
   } catch (error) {
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+      error: error instanceof Error ? error.message : "Unknown error"
+    })
   }
-});
+})
 
 // ============================================
 // 5. PROCESSAMENTO EM BATCH
@@ -154,41 +151,41 @@ async function example5_batchProcessing() {
   const videos = [
     "dQw4w9WgXcQ", // ID1
     "9bZkp7q19f0", // ID2
-    "E8I7svnFLXw", // ID3
-  ];
+    "E8I7svnFLXw" // ID3
+  ]
 
   const client = new ApifyClient({
-    token: "seu_token_apify_aqui",
-  });
+    token: "seu_token_apify_aqui"
+  })
 
-  const ACTOR_ID = "seu_username/youtube-transcript-wrapper";
+  const ACTOR_ID = "seu_username/youtube-transcript-wrapper"
 
   // Iniciar todas as execuções em paralelo
   const runs = await Promise.all(
-    videos.map((videoId) =>
+    videos.map(videoId =>
       client.actor(ACTOR_ID).call({
         videoId,
         metadata: true,
-        apifyToken: "seu_token_apify_aqui",
+        apifyToken: "seu_token_apify_aqui"
       })
     )
-  );
+  )
 
-  console.log(`${runs.length} execuções iniciadas`);
+  console.log(`${runs.length} execuções iniciadas`)
 
   // Aguardar todas as execuções
   const allResults = await Promise.all(
-    runs.map(async (run) => {
-      const { items } = await client.dataset(run.defaultDatasetId).listItems();
-      return items;
+    runs.map(async run => {
+      const { items } = await client.dataset(run.defaultDatasetId).listItems()
+      return items
     })
-  );
+  )
 
   // Consolidar resultados
-  const flatResults = allResults.flat();
-  console.log(`Total de transcrições: ${flatResults.length}`);
+  const flatResults = allResults.flat()
+  console.log(`Total de transcrições: ${flatResults.length}`)
 
-  return flatResults;
+  return flatResults
 }
 
 // ============================================
@@ -197,47 +194,47 @@ async function example5_batchProcessing() {
 
 async function example6_robustErrorHandling() {
   const client = new ApifyClient({
-    token: "seu_token_apify_aqui",
-  });
+    token: "seu_token_apify_aqui"
+  })
 
   try {
     const run = await client.actor("seu_username/youtube-transcript-wrapper").call(
       {
         videoId: "dQw4w9WgXcQ",
         metadata: true,
-        apifyToken: "seu_token_apify_aqui",
+        apifyToken: "seu_token_apify_aqui"
       },
       {
         timeout: 30 * 60 * 1000, // 30 minutos
-        webhookEventTypes: ["ACTOR_RUN_SUCCEEDED", "ACTOR_RUN_FAILED"],
+        webhookEventTypes: ["ACTOR_RUN_SUCCEEDED", "ACTOR_RUN_FAILED"]
       }
-    );
+    )
 
     // Verificar se foi bem-sucedido
     if (run.status !== "SUCCEEDED") {
-      throw new Error(`Run falhou com status: ${run.status}`);
+      throw new Error(`Run falhou com status: ${run.status}`)
     }
 
-    const kvStore = await client.keyValueStore(run.defaultKeyValueStoreId);
-    const output = await kvStore.getValue("OUTPUT");
+    const kvStore = await client.keyValueStore(run.defaultKeyValueStoreId)
+    const output = await kvStore.getValue("OUTPUT")
 
     if (!output?.success) {
-      throw new Error(`Actor retornou erro: ${output?.error}`);
+      throw new Error(`Actor retornou erro: ${output?.error}`)
     }
 
-    return output;
+    return output
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("timeout")) {
-        console.error("Timeout na execução do actor");
+        console.error("Timeout na execução do actor")
       } else if (error.message.includes("not found")) {
-        console.error("Actor não encontrado. Verifique o ID");
+        console.error("Actor não encontrado. Verifique o ID")
       } else {
-        console.error("Erro:", error.message);
+        console.error("Erro:", error.message)
       }
     }
 
-    throw error;
+    throw error
   }
 }
 
@@ -247,32 +244,30 @@ async function example6_robustErrorHandling() {
 
 async function example7_monitorWithLogs() {
   const client = new ApifyClient({
-    token: "seu_token_apify_aqui",
-  });
+    token: "seu_token_apify_aqui"
+  })
 
-  const run = await client
-    .actor("seu_username/youtube-transcript-wrapper")
-    .call({
-      videoId: "dQw4w9WgXcQ",
-      metadata: true,
-      apifyToken: "seu_token_apify_aqui",
-    });
+  const run = await client.actor("seu_username/youtube-transcript-wrapper").call({
+    videoId: "dQw4w9WgXcQ",
+    metadata: true,
+    apifyToken: "seu_token_apify_aqui"
+  })
 
   // Obter logs
-  const log = await client.log(run.logId).get();
-  console.log("Logs da execução:");
-  console.log(log);
+  const log = await client.log(run.logId).get()
+  console.log("Logs da execução:")
+  console.log(log)
 
   // Obter dataset
-  const dataset = await client.dataset(run.defaultDatasetId).listItems();
-  console.log("Dados do dataset:", dataset);
+  const dataset = await client.dataset(run.defaultDatasetId).listItems()
+  console.log("Dados do dataset:", dataset)
 
   // Obter key-value store
-  const kvStore = await client.keyValueStore(run.defaultKeyValueStoreId);
-  const output = await kvStore.getValue("OUTPUT");
-  console.log("Output armazenado:", output);
+  const kvStore = await client.keyValueStore(run.defaultKeyValueStoreId)
+  const output = await kvStore.getValue("OUTPUT")
+  console.log("Output armazenado:", output)
 
-  return { log, dataset, output };
+  return { log, dataset, output }
 }
 
 // ============================================
@@ -313,5 +308,5 @@ export {
   example3_getDatasetResults,
   example5_batchProcessing,
   example6_robustErrorHandling,
-  example7_monitorWithLogs,
-};
+  example7_monitorWithLogs
+}

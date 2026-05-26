@@ -2,7 +2,7 @@
 
 ## 🎯 O que foi feito
 
-Seu código foi **completamente convertido e configurado para ser publicado como um Actor na plataforma Apify**. 
+Seu código foi **completamente convertido e configurado para ser publicado como um Actor na plataforma Apify**.
 
 ### ✨ Alterações Implementadas:
 
@@ -44,44 +44,54 @@ Seu código foi **completamente convertido e configurado para ser publicado como
 ## 🚀 Próximos Passos (Execute em Ordem)
 
 ### Passo 1: Instalar Dependências
+
 ```bash
 npm install
 ```
 
 ### Passo 2: Verificar Estrutura (Opcional)
+
 ```bash
 bash check-actor-structure.sh
 ```
+
 Isso verifica se tudo está configurado corretamente.
 
 ### Passo 3: Testar Localmente (Opcional)
+
 ```bash
 npm run typecheck  # Verifica tipos TypeScript
 npm start          # Executa o actor uma vez
 ```
 
 **Nota:** Para teste local, você precisa de:
+
 - `storage/key_value_stores/default/INPUT.json` (já criado)
 - Se quiser testar fallback OpenRouter: sua API key no INPUT.json
 
 ### Passo 4: Instalar Apify CLI
+
 ```bash
 npm install -g apify
 ```
 
 ### Passo 5: Fazer Login na Apify
+
 ```bash
 apify login
 ```
+
 - Você será pedido para inserir seu token
 - Obtenha em: https://console.apify.com/account/integrations
 
 ### Passo 6: Publicar seu Actor 🎉
+
 ```bash
 apify push
 ```
 
 Isto irá:
+
 - Compilar seu código TypeScript
 - Criar a imagem Docker
 - Enviar para a plataforma Apify
@@ -99,6 +109,7 @@ Criamos guias completos:
 ## 📊 Input do Actor
 
 Seu actor agora espera uma URL completa do YouTube:
+
 ```json
 {
   "youtubeUrl": "https://www.youtube.com/watch?v=zw_e_vVTq4Y",
@@ -108,6 +119,7 @@ Seu actor agora espera uma URL completa do YouTube:
 ```
 
 ### Campos
+
 - **youtubeUrl** (obrigatório): URL completa do YouTube
 - **openRouterApiKey** (opcional): Necessário se o vídeo não tiver legenda disponível
 - **openRouterModel** (opcional): Modelo Whisper a usar (padrão: openai/whisper-large-v3)
@@ -115,6 +127,7 @@ Seu actor agora espera uma URL completa do YouTube:
 ## 📤 Output do Actor
 
 Em caso de sucesso (legenda disponível):
+
 ```json
 {
   "success": true,
@@ -128,6 +141,7 @@ Em caso de sucesso (legenda disponível):
 ```
 
 Em caso de sucesso (via OpenRouter):
+
 ```json
 {
   "success": true,
@@ -141,6 +155,7 @@ Em caso de sucesso (via OpenRouter):
 ```
 
 Em caso de erro:
+
 ```json
 {
   "success": false,
@@ -153,6 +168,7 @@ Em caso de erro:
 ## 🔐 Variáveis de Ambiente
 
 Para desenvolvimento local, crie `.env`:
+
 ```env
 OPENROUTER_API_KEY=sk-or-v1-XXXXX
 OPENROUTER_MODEL=openai/whisper-large-v3
@@ -175,12 +191,14 @@ OPENROUTER_MODEL=openai/whisper-large-v3
 ## 🆘 Troubleshooting
 
 ### "npm install não funciona"
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install --legacy-peer-deps
 ```
 
 ### "apify push falha"
+
 ```bash
 # Verifique login
 apify info
@@ -191,6 +209,7 @@ apify login
 ```
 
 ### "Erro de TypeScript na publicação"
+
 ```bash
 npm run typecheck  # Vê os erros específicos
 npm run build      # Tenta compilar
@@ -207,9 +226,10 @@ Se encontrar problemas:
 
 ## 🎉 Parabéns!
 
-Seu actor está **100% pronto para publicação**! 
+Seu actor está **100% pronto para publicação**!
 
 Basta executar:
+
 ```bash
 apify login
 apify push
@@ -220,4 +240,3 @@ E seu actor estará disponível em poucos minutos! 🚀
 ---
 
 **Dúvidas?** Consulte `PUBLICATION_GUIDE.md` para instruções mais detalhadas.
-

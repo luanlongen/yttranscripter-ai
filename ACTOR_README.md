@@ -17,25 +17,31 @@ Este é um **actor Apify** que atua como um wrapper para o `apihq/youtube-transc
 ### Passos para Publicar na Apify
 
 1. **Clone ou configure o repositório:**
+
    ```bash
    cd /caminho/para/seu/projeto
    ```
 
 2. **Instale as dependências:**
+
    ```bash
    npm install
    ```
 
 3. **Faça login na Apify CLI:**
+
    ```bash
    apify login
    ```
+
    Insira seu token do Apify quando solicitado. Você pode obtê-lo em: https://console.apify.com/account/integrations
 
 4. **Publique o actor:**
+
    ```bash
    apify push
    ```
+
    Isso enviará seu código para a plataforma Apify e criará o actor.
 
 5. **Acesse seu actor:**
@@ -55,11 +61,11 @@ O actor aceita o seguinte JSON como entrada:
 
 ### Campos de Input
 
-| Campo | Tipo | Requerido | Descrição |
-|-------|------|----------|-----------|
-| `videoId` | string | ✅ Sim | O ID do vídeo do YouTube (parte após `v=` na URL) |
-| `metadata` | boolean | ❌ Não | Se deve incluir metadados. Padrão: `true` |
-| `apifyToken` | string | ✅ Sim | Seu token API do Apify (obtenha em https://console.apify.com/account/integrations) |
+| Campo        | Tipo    | Requerido | Descrição                                                                          |
+| ------------ | ------- | --------- | ---------------------------------------------------------------------------------- |
+| `videoId`    | string  | ✅ Sim    | O ID do vídeo do YouTube (parte após `v=` na URL)                                  |
+| `metadata`   | boolean | ❌ Não    | Se deve incluir metadados. Padrão: `true`                                          |
+| `apifyToken` | string  | ✅ Sim    | Seu token API do Apify (obtenha em https://console.apify.com/account/integrations) |
 
 ### Exemplo de URL do YouTube
 
@@ -106,6 +112,7 @@ Em caso de erro:
 Para testar o actor localmente antes de publicar:
 
 1. **Configure o INPUT.json:**
+
    ```bash
    cat > storage/key_value_stores/default/INPUT.json << 'EOF'
    {
@@ -117,11 +124,13 @@ Para testar o actor localmente antes de publicar:
    ```
 
 2. **Execute o actor localmente:**
+
    ```bash
    npm start
    ```
 
    Ou com watch mode:
+
    ```bash
    npm run dev
    ```
@@ -167,7 +176,7 @@ npm run build
 
 ## 🔑 Segurança
 
-⚠️ **Importante:** 
+⚠️ **Importante:**
 
 - **Nunca** commite seu token Apify no repositório
 - Use `.env` para desenvolvimento local ou Secrets na plataforma Apify
@@ -200,6 +209,7 @@ Seu Nome / Seu Usuário da Apify
 ---
 
 **Pronto para publicar? Execute:**
+
 ```bash
 apify login
 apify push

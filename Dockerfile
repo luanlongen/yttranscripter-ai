@@ -3,9 +3,8 @@ FROM apify/actor-node:20
 # Copy package files and TypeScript config
 COPY package*.json tsconfig.json ./
 
-# Install all dependencies (including dev) for build
-RUN npm --quiet set progress=false \
-    && npm install
+# Install all dependencies including dev for TypeScript compilation
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . ./
