@@ -1,11 +1,8 @@
 FROM apify/actor-node:20
 
-# Install Python3, pip, and yt-dlp for audio download fallback
-RUN apt-get update -qq \
-    && apt-get install -y -qq python3 python3-pip \
-    && pip3 install yt-dlp \
-    && apt-get clean -qq \
-    && rm -rf /var/lib/apt/lists/*
+# Install Python3, pip, and yt-dlp for audio download fallback (Alpine-based image)
+RUN apk add --no-cache python3 py3-pip ffmpeg \
+    && pip3 install yt-dlp
 
 # Copy package files and TypeScript config
 COPY package*.json tsconfig.json ./
