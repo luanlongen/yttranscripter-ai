@@ -41,6 +41,45 @@
     },
     "required": ["youtubeUrl"]
   },
+  "output": {
+    "contentType": "application/json",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Whether transcription was successful"
+        },
+        "youtubeUrl": {
+          "type": "string",
+          "description": "The YouTube URL provided"
+        },
+        "videoId": {
+          "type": "string",
+          "description": "Extracted YouTube video ID"
+        },
+        "transcript": {
+          "type": "string",
+          "description": "Full transcribed text"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["youtube-transcript", "openrouter"],
+          "description": "Which service provided the transcript"
+        },
+        "language": {
+          "type": "string",
+          "description": "Detected language code"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the transcript was generated"
+        }
+      },
+      "required": ["success", "youtubeUrl", "transcript"]
+    }
+  },
   "containerUrl": "https://apify.com",
   "platform": ["NODEJS"]
 }
