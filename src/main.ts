@@ -143,7 +143,9 @@ function downloadAudio(url: string): { audioPath: string } | { error: string; de
     "--js-runtimes",
     "node",
     "--extractor-args",
-    "youtube:player_client=android"
+    "youtube:player_client=android_embedded",
+    "--user-agent",
+    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.165 Mobile Safari/537.36"
   ]
 
   args.push(url)
