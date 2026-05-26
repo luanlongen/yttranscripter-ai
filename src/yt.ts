@@ -16,7 +16,7 @@ import "dotenv/config"
 
 import { createServer, type IncomingMessage, type ServerResponse } from "http"
 import { randomUUID } from "crypto"
-import { spawnSync } from "child_process"
+import ytdl from "@distube/ytdl-core"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
@@ -215,62 +215,51 @@ function criarArquivoTemporario(): { base: string; audioPath: string } {
   }
 }
 
-function baixarAudio(url: string): { audioPath: string } | { error: string; details?: string } {
-  const check = spawnSync("python3", ["-m", "yt_dlp", "--version"], { encoding: "utf-8" })
-  if (check.error) {
-    const message = "yt-dlp não encontrado no container ou na máquina."
-    log("erro", message)
-    return { error: message, details: check.error.message }
-  }
-
+async function baixarAudio(url: string): Promise<{ audioPath: string } | { error: string; details?: string }> {
   const { base, audioPath } = criarArquivoTemporario()
-
-  if (fs.existsSync(audioPath)) {
-    fs.unlinkSync(audioPath)
-  }
 
   log("info", "Baixando áudio do vídeo...")
 
-  const args = [
-    "-m",
-    "yt_dlp",
-    "-f",
-    "bestaudio/best",
-    "--extract-audio",
-    "--audio-format",
-    "mp3",
-    "--audio-quality",
-    "64K",
-    "-o",
-    `${base}.%(ext)s`,
-    "--no-playlist",
-    "--js-runtimes",
-    "node",
-    "--extractor-args",
-    "youtube:player_client=web_creator",
-    "--user-agent",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-  ]
+  return await new Promise(resolve => {
+    const stream = ytdl(url, {
+      filter: "audioonly",
+      quality: "lowestaudio",
+      requestOptions: {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+      }
+    })
 
-  args.push(url)
+    const writeStream = fs.createWriteStream(audioPath)
+    stream.pipe(writeStream)
 
-  const resultado = spawnSync("python3", args, { encoding: "utf-8", stdio: "pipe" })
+    let streamError: string | null = null
 
-  if (resultado.status !== 0) {
-    const message = "Falha ao baixar áudio do vídeo."
-    log("erro", `${message}\n${resultado.stderr}`)
-    return { error: message, details: resultado.stderr || resultado.stdout || "yt-dlp retornou erro desconhecido." }
-  }
+    stream.on("error", (err: Error) => {
+      streamError = err.message
+    })
 
-  if (!fs.existsSync(audioPath)) {
-    const message = "Arquivo de áudio não encontrado após o download."
-    log("erro", message)
-    return { error: message }
-  }
+    writeStream.on("finish", () => {
+      if (streamError) {
+        resolve({ error: "Falha ao baixar áudio do vídeo.", details: streamError })
+        return
+      }
 
-  const tamanhoMB = fs.statSync(audioPath).size / (1024 * 1024)
-  log("info", `Áudio baixado: ${tamanhoMB.toFixed(1)} MB`)
-  return { audioPath }
+      if (!fs.existsSync(audioPath)) {
+        resolve({ error: "Arquivo de áudio não encontrado após o download." })
+        return
+      }
+
+      const tamanhoMB = fs.statSync(audioPath).size / (1024 * 1024)
+      log("info", `Áudio baixado: ${tamanhoMB.toFixed(1)} MB`)
+      resolve({ audioPath })
+    })
+
+    writeStream.on("error", (err: Error) => {
+      resolve({ error: "Falha ao escrever arquivo de áudio.", details: err.message })
+    })
+  })
 }
 
 async function chamarOpenRouter(
@@ -392,7 +381,7 @@ async function transcreverUrlDoYoutube(
   }
 
   log("info", "Legendas não disponíveis. Usando OpenRouter (Whisper Large V3)...")
-  const audioResultado = baixarAudio(url)
+  const audioResultado = await baixarAudio(url)
 
   if ("error" in audioResultado) {
     return {

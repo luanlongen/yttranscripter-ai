@@ -1,5 +1,5 @@
 import { Actor } from "apify"
-import { spawnSync } from "child_process"
+import ytdl from "@distube/ytdl-core"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
@@ -111,61 +111,51 @@ function createTempFile(): { base: string; audioPath: string } {
   }
 }
 
-function downloadAudio(url: string): { audioPath: string } | { error: string; details?: string } {
-  const check = spawnSync("python3", ["-m", "yt_dlp", "--version"], { encoding: "utf-8" })
-  if (check.error) {
-    const message = "yt-dlp not found. Install: pip install yt-dlp"
-    log("error", message)
-    return { error: message, details: check.error.message }
-  }
-
+async function downloadAudio(url: string): Promise<{ audioPath: string } | { error: string; details?: string }> {
   const { base, audioPath } = createTempFile()
-
-  if (fs.existsSync(audioPath)) {
-    fs.unlinkSync(audioPath)
-  }
 
   log("info", "Downloading audio from video...")
 
-  const args = [
-    "-m",
-    "yt_dlp",
-    "-f",
-    "bestaudio/best",
-    "--extract-audio",
-    "--audio-format",
-    "mp3",
-    "--audio-quality",
-    "64K",
-    "-o",
-    `${base}.%(ext)s`,
-    "--no-playlist",
-    "--js-runtimes",
-    "node",
-    "--extractor-args",
-    "youtube:player_client=web_creator",
-    "--user-agent",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-  ]
+  return await new Promise(resolve => {
+    const stream = ytdl(url, {
+      filter: "audioonly",
+      quality: "lowestaudio",
+      requestOptions: {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+      }
+    })
 
-  args.push(url)
+    const writeStream = fs.createWriteStream(audioPath)
+    stream.pipe(writeStream)
 
-  const result = spawnSync("python3", args, { encoding: "utf-8", stdio: "pipe" })
+    let streamError: string | null = null
 
-  if (result.status !== 0) {
-    const message = "Failed to download audio"
-    log("error", `${message}\n${result.stderr}`)
-    return { error: message, details: result.stderr || result.stdout }
-  }
+    stream.on("error", (err: Error) => {
+      streamError = err.message
+    })
 
-  if (!fs.existsSync(audioPath)) {
-    return { error: "Audio file not found after download" }
-  }
+    writeStream.on("finish", () => {
+      if (streamError) {
+        resolve({ error: "Failed to download audio", details: streamError })
+        return
+      }
 
-  const sizeMB = fs.statSync(audioPath).size / (1024 * 1024)
-  log("info", `Audio downloaded: ${sizeMB.toFixed(1)} MB`)
+      if (!fs.existsSync(audioPath)) {
+        resolve({ error: "Audio file not found after download" })
+        return
+      }
 
-  return { audioPath }
+      const sizeMB = fs.statSync(audioPath).size / (1024 * 1024)
+      log("info", `Audio downloaded: ${sizeMB.toFixed(1)} MB`)
+      resolve({ audioPath })
+    })
+
+    writeStream.on("error", (err: Error) => {
+      resolve({ error: "Failed to write audio file", details: err.message })
+    })
+  })
 }
 
 async function callOpenRouter(
@@ -307,7 +297,7 @@ async function transcribeYoutubeUrl(
 
   log("info", "Captions not available. Downloading audio for OpenRouter...")
 
-  const downloadResult = downloadAudio(url)
+  const downloadResult = await downloadAudio(url)
   if ("error" in downloadResult) {
     return {
       success: false,
