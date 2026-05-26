@@ -4,7 +4,7 @@
   "description": "Apify actor that wraps the YouTube transcript scraper for easy transcript extraction",
   "main": "src/main.ts",
   "scripts": {
-    "start": "node dist/src/main.js",
+    "start": "node dist/main.js",
     "dev": "tsx watch src/main.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc"
