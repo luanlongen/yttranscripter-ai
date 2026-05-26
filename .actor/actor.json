@@ -19,6 +19,7 @@
         "title": "YouTube URL",
         "description": "Full YouTube URL or short link (youtube.com, youtu.be, etc.)",
         "type": "string",
+        "editor": "textfield",
         "example": "https://www.youtube.com/watch?v=zw_e_vVTq4Y",
         "isSecret": false
       },
@@ -26,12 +27,14 @@
         "title": "OpenRouter API Key",
         "description": "Your OpenRouter API key for Whisper transcription. Required if video has no captions. Get it from https://openrouter.ai/keys",
         "type": "string",
+        "editor": "hidden",
         "isSecret": true
       },
       "openRouterModel": {
         "title": "OpenRouter Model",
         "description": "Whisper model to use for transcription. Defaults to openai/whisper-large-v3",
         "type": "string",
+        "editor": "textfield",
         "example": "openai/whisper-large-v3",
         "isSecret": false
       }
