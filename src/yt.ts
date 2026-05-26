@@ -247,9 +247,9 @@ function baixarAudio(url: string): { audioPath: string } | { error: string; deta
     "--js-runtimes",
     "node",
     "--extractor-args",
-    "youtube:player_client=android_embedded",
+    "youtube:player_client=web_creator",
     "--user-agent",
-    "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.165 Mobile Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
   ]
 
   args.push(url)
