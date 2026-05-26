@@ -1,0 +1,5 @@
+{
+  "youtubeUrl": "https://www.youtube.com/watch?v=zw_e_vVTq4Y",
+  "openRouterApiKey": "sk-or-v1-YOUR_OPENROUTER_KEY_HERE",
+  "openRouterModel": "openai/whisper-large-v3"
+}

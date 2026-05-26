@@ -1,0 +1,30 @@
+{
+  "title": "YouTube Transcriber Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "youtubeUrl": {
+      "title": "YouTube URL",
+      "description": "Full YouTube URL or short link (e.g., https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID)",
+      "type": "string",
+      "example": "https://www.youtube.com/watch?v=zw_e_vVTq4Y",
+      "minLength": 10
+    },
+    "openRouterApiKey": {
+      "title": "OpenRouter API Key",
+      "description": "Your OpenRouter API key for Whisper transcription fallback. Only needed if video has no available captions. Get it from https://openrouter.ai/keys",
+      "type": "string",
+      "editor": "hidden",
+      "isSecret": true
+    },
+    "openRouterModel": {
+      "title": "OpenRouter Model",
+      "description": "Whisper model for audio transcription. Defaults to openai/whisper-large-v3 (best quality but slower)",
+      "type": "string",
+      "example": "openai/whisper-large-v3",
+      "default": "openai/whisper-large-v3"
+    }
+  },
+  "required": ["youtubeUrl"]
+}
+
