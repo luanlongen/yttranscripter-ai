@@ -17,6 +17,7 @@ import "dotenv/config"
 import { createServer, type IncomingMessage, type ServerResponse } from "http"
 import { randomUUID } from "crypto"
 import ytdl from "@distube/ytdl-core"
+import { spawnSync } from "child_process"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
@@ -215,12 +216,37 @@ function criarArquivoTemporario(): { base: string; audioPath: string } {
   }
 }
 
+function baixarAudioViaYtdlp(url: string, audioPath: string): boolean {
+  log("info", "Tentando fallback yt-dlp...")
+
+  const args = [
+    "-m", "yt_dlp",
+    "-f", "bestaudio/best",
+    "--extract-audio",
+    "--audio-format", "mp3",
+    "--audio-quality", "64K",
+    "-o", `${audioPath.replace(".mp3", "")}.%(ext)s`,
+    "--no-playlist",
+    "--js-runtimes", "node",
+    "--extractor-args", "youtube:player_client=android,web_creator,ios",
+    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    url
+  ]
+
+  const resultado = spawnSync("python3", args, { encoding: "utf-8", stdio: "pipe" })
+  if (resultado.status !== 0) {
+    log("erro", `yt-dlp falhou: ${resultado.stderr}`)
+    return false
+  }
+  return fs.existsSync(audioPath)
+}
+
 async function baixarAudio(url: string): Promise<{ audioPath: string } | { error: string; details?: string }> {
   const { base, audioPath } = criarArquivoTemporario()
 
   log("info", "Baixando áudio do vídeo...")
 
-  return await new Promise(resolve => {
+  const baixado = await new Promise<boolean>(resolve => {
     const stream = ytdl(url, {
       filter: "audioonly",
       quality: "lowestaudio",
@@ -242,24 +268,30 @@ async function baixarAudio(url: string): Promise<{ audioPath: string } | { error
 
     writeStream.on("finish", () => {
       if (streamError) {
-        resolve({ error: "Falha ao baixar áudio do vídeo.", details: streamError })
+        log("aviso", `ytdl-core falhou: ${streamError}`)
+        resolve(false)
         return
       }
-
-      if (!fs.existsSync(audioPath)) {
-        resolve({ error: "Arquivo de áudio não encontrado após o download." })
-        return
-      }
-
-      const tamanhoMB = fs.statSync(audioPath).size / (1024 * 1024)
-      log("info", `Áudio baixado: ${tamanhoMB.toFixed(1)} MB`)
-      resolve({ audioPath })
+      resolve(fs.existsSync(audioPath))
     })
 
     writeStream.on("error", (err: Error) => {
-      resolve({ error: "Falha ao escrever arquivo de áudio.", details: err.message })
+      log("aviso", `ytdl-core erro de escrita: ${err.message}`)
+      resolve(false)
     })
   })
+
+  if (!baixado) {
+    if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath)
+    const ytDlpOk = baixarAudioViaYtdlp(url, audioPath)
+    if (!ytDlpOk) {
+      return { error: "Falha ao baixar áudio do vídeo.", details: "ytdl-core e yt-dlp ambos falharam" }
+    }
+  }
+
+  const tamanhoMB = fs.statSync(audioPath).size / (1024 * 1024)
+  log("info", `Áudio baixado: ${tamanhoMB.toFixed(1)} MB`)
+  return { audioPath }
 }
 
 async function chamarOpenRouter(

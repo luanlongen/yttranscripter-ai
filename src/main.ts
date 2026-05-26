@@ -1,5 +1,6 @@
 import { Actor } from "apify"
 import ytdl from "@distube/ytdl-core"
+import { spawnSync } from "child_process"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
@@ -73,25 +74,37 @@ async function transcribeViaYoutubeTranscript(
 ): Promise<{ transcript: string; language?: string } | null> {
   try {
     const { YoutubeTranscript } = await import("youtube-transcript")
+    const languages = ["pt", "pt-BR", "pt-PT", "en", "en-US"]
     const maxRetries = 3
     const delayMs = 1000
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const segments = await YoutubeTranscript.fetchTranscript(videoId)
-
-        if (segments && segments.length > 0) {
-          log("info", "youtube-transcript worked")
-          return {
-            transcript: (segments as Array<{ text: string }>).map((segment: any) => segment.text.trim()).join(" ")
+    for (const lang of [...languages, undefined]) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const requestOptions = {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
           }
-        }
-      } catch (error) {
-        if (attempt < maxRetries) {
-          log("warn", `youtube-transcript attempt ${attempt}/${maxRetries} failed`)
-          await new Promise(resolve => setTimeout(resolve, delayMs))
-        } else {
-          log("warn", "youtube-transcript failed after all attempts")
+          const options = lang
+            ? { lang, requestOptions }
+            : { requestOptions }
+          const segments = await YoutubeTranscript.fetchTranscript(videoId, options)
+
+          if (segments && segments.length > 0) {
+            log("info", `youtube-transcript worked${lang ? ` (lang: ${lang})` : ""}`)
+            return {
+              transcript: (segments as Array<{ text: string }>).map((segment: any) => segment.text.trim()).join(" "),
+              language: lang
+            }
+          }
+        } catch (error) {
+          if (attempt < maxRetries) {
+            log("warn", `youtube-transcript attempt ${attempt}/${maxRetries} failed${lang ? ` (lang: ${lang})` : ""}`)
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+          } else {
+            log("warn", `youtube-transcript failed after all attempts${lang ? ` (lang: ${lang})` : ""}`)
+          }
         }
       }
     }
@@ -111,12 +124,38 @@ function createTempFile(): { base: string; audioPath: string } {
   }
 }
 
+function downloadAudioViaYtdlp(url: string, audioPath: string): boolean {
+  log("info", "Trying yt-dlp fallback...")
+
+  const args = [
+    "-m", "yt_dlp",
+    "-f", "bestaudio/best",
+    "--extract-audio",
+    "--audio-format", "mp3",
+    "--audio-quality", "64K",
+    "-o", `${audioPath.replace(".mp3", "")}.%(ext)s`,
+    "--no-playlist",
+    "--js-runtimes", "node",
+    "--extractor-args", "youtube:player_client=android,web_creator,ios",
+    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    url
+  ]
+
+  const result = spawnSync("python3", args, { encoding: "utf-8", stdio: "pipe" })
+  if (result.status !== 0) {
+    log("error", `yt-dlp failed: ${result.stderr}`)
+    return false
+  }
+  return fs.existsSync(audioPath)
+}
+
 async function downloadAudio(url: string): Promise<{ audioPath: string } | { error: string; details?: string }> {
   const { base, audioPath } = createTempFile()
 
   log("info", "Downloading audio from video...")
 
-  return await new Promise(resolve => {
+  // Try @distube/ytdl-core first
+  const downloaded = await new Promise<boolean>(resolve => {
     const stream = ytdl(url, {
       filter: "audioonly",
       quality: "lowestaudio",
@@ -138,24 +177,31 @@ async function downloadAudio(url: string): Promise<{ audioPath: string } | { err
 
     writeStream.on("finish", () => {
       if (streamError) {
-        resolve({ error: "Failed to download audio", details: streamError })
+        log("warn", `ytdl-core failed: ${streamError}`)
+        resolve(false)
         return
       }
-
-      if (!fs.existsSync(audioPath)) {
-        resolve({ error: "Audio file not found after download" })
-        return
-      }
-
-      const sizeMB = fs.statSync(audioPath).size / (1024 * 1024)
-      log("info", `Audio downloaded: ${sizeMB.toFixed(1)} MB`)
-      resolve({ audioPath })
+      resolve(fs.existsSync(audioPath))
     })
 
     writeStream.on("error", (err: Error) => {
-      resolve({ error: "Failed to write audio file", details: err.message })
+      log("warn", `ytdl-core write error: ${err.message}`)
+      resolve(false)
     })
   })
+
+  // Fallback to yt-dlp if ytdl-core failed
+  if (!downloaded) {
+    if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath)
+    const ytDlpOk = downloadAudioViaYtdlp(url, audioPath)
+    if (!ytDlpOk) {
+      return { error: "Failed to download audio", details: "ytdl-core and yt-dlp both failed" }
+    }
+  }
+
+  const sizeMB = fs.statSync(audioPath).size / (1024 * 1024)
+  log("info", `Audio downloaded: ${sizeMB.toFixed(1)} MB`)
+  return { audioPath }
 }
 
 async function callOpenRouter(
