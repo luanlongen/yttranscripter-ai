@@ -3,7 +3,7 @@
   "name": "youtube-transcriber",
   "title": "YouTube Transcriber",
   "description": "Extracts transcripts from YouTube videos. First tries to get available captions, then falls back to downloading audio and transcribing via OpenRouter's Whisper model. Supports optional residential proxy for bypassing YouTube anti-bot on datacenter IPs.",
-  "version": "2.0.0",
+  "version": "2.0",
   "readme": "# YouTube Transcriber\n\nExtracts transcripts from YouTube videos with intelligent fallback. First attempts to get available YouTube captions, then falls back to downloading audio and using OpenRouter's Whisper model for transcription.\n\n## Features\n\n- Smart Caption Detection: Tries to extract available YouTube captions first (fast, free)\n- Audio Fallback: Downloads audio and transcribes via OpenRouter's Whisper model\n- Multi-language Support: Portuguese, English, and more (configurable via 'language' field)\n- Optional Residential Proxy: Bypass YouTube anti-bot on datacenter IPs (Apify residential proxy)\n- Audio Chunking: Splits long videos into N-minute segments via ffmpeg for reliable Whisper transcription\n\n## Input\n\n```json\n{\n  \"youtubeUrl\": \"https://www.youtube.com/watch?v=zw_e_vVTq4Y\",\n  \"openRouterApiKey\": \"sk-xxx\",\n  \"openRouterModel\": \"openai/whisper-large-v3\",\n  \"language\": \"pt\",\n  \"segmentMinutes\": 5,\n  \"useProxy\": false\n}\n```\n\n## Input Fields\n\n- **youtubeUrl** (string, required): Full YouTube URL or short link\n- **openRouterApiKey** (string, optional): Your OpenRouter API key. Required if video has no captions.\n- **openRouterModel** (string, optional): Whisper model. Default: openai/whisper-large-v3\n- **language** (string, optional): Language code for captions and Whisper. Default: pt\n- **segmentMinutes** (integer, optional): Audio segment length for Whisper. Smaller = more reliable. Default: 5\n- **useProxy** (boolean, optional): Use Apify residential proxy for captions fetch (bypasses YouTube anti-bot on datacenter IPs). Incurs proxy traffic charges. Default: false\n\n## Output\n\nSuccess case (youtube-transcript):\n```json\n{\n  \"success\": true,\n  \"youtubeUrl\": \"...\",\n  \"videoId\": \"...\",\n  \"transcript\": \"...\",\n  \"provider\": \"youtube-transcript\",\n  \"language\": \"pt\",\n  \"generatedAt\": \"...\"\n}\n```\n\nSuccess case (openrouter):\n```json\n{\n  \"success\": true,\n  \"youtubeUrl\": \"...\",\n  \"videoId\": \"...\",\n  \"transcript\": \"...\",\n  \"provider\": \"openrouter\",\n  \"usage\": { \"input_tokens\": 1234, \"output_tokens\": 567 },\n  \"generatedAt\": \"...\"\n}\n```\n\nError case:\n```json\n{\n  \"success\": false,\n  \"youtubeUrl\": \"...\",\n  \"error\": \"...\",\n  \"details\": \"...\",\n  \"generatedAt\": \"...\"\n}\n```\n\n## Notes\n\n- Audio download NEVER uses proxy (CDN tolerates datacenter IPs, residential proxy per GB is expensive for audio)\n- Self-host outside Apify (AWS EC2/Lightsail) requires your own proxy solution (BrightData, Smartproxy, Oxylabs) or fallback to Whisper when captions fail\n\n## License\n\nISC",
   "category": "SCRAPERS",
   "seo": {
@@ -17,48 +17,37 @@
     "properties": {
       "youtubeUrl": {
         "title": "YouTube URL",
-        "description": "Full YouTube URL or short link (youtube.com, youtu.be, etc.)",
         "type": "string",
         "editor": "textfield",
-        "example": "https://www.youtube.com/watch?v=zw_e_vVTq4Y",
-        "isSecret": false
+        "example": "https://www.youtube.com/watch?v=zw_e_vVTq4Y"
       },
       "openRouterApiKey": {
         "title": "OpenRouter API Key",
-        "description": "Your OpenRouter API key for Whisper transcription. Required if video has no captions. Get it from https://openrouter.ai/keys",
         "type": "string",
         "editor": "hidden",
         "isSecret": true
       },
       "openRouterModel": {
         "title": "OpenRouter Model",
-        "description": "Whisper model to use. Defaults to openai/whisper-large-v3",
         "type": "string",
         "editor": "textfield",
-        "example": "openai/whisper-large-v3",
-        "isSecret": false
+        "example": "openai/whisper-large-v3"
       },
       "language": {
         "title": "Language",
-        "description": "Language code for captions and Whisper (e.g. pt, en, es). Default: pt",
         "type": "string",
         "editor": "textfield",
-        "example": "pt",
-        "isSecret": false
+        "example": "pt"
       },
       "segmentMinutes": {
         "title": "Audio Segment Length (minutes)",
-        "description": "Length of each audio segment when splitting for Whisper. Smaller = more reliable, more API calls. Default: 5",
         "type": "integer",
-        "editor": "number",
-        "isSecret": false
+        "editor": "number"
       },
       "useProxy": {
         "title": "Use Residential Proxy",
-        "description": "Fetch captions through Apify residential proxy (bypasses YouTube anti-bot on datacenter IPs). Incurs proxy traffic charges. Default: false",
         "type": "boolean",
-        "editor": "checkbox",
-        "isSecret": false
+        "editor": "checkbox"
       }
     },
     "required": ["youtubeUrl"]
