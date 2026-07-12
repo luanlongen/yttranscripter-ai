@@ -93,6 +93,8 @@ async function downloadViaYtdlp(
     "--extract-audio", "--audio-format", "mp3", "--audio-quality", "64K",
     "-o", `${base}.%(ext)s`,
     "--no-playlist",
+    "--js-runtimes", "node",
+    "--extractor-args", "youtube:player_client=android,web_creator,ios",
     "--user-agent", userAgent,
     url,
   ]
