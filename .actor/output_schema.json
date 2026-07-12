@@ -1,14 +1,20 @@
 {
-  "actorOutputSchemaVersion": 1,
   "title": "YouTube Transcriber Output",
-  "description": "Extracted transcript from YouTube video stored in the default dataset",
   "type": "object",
   "properties": {
-    "transcripts": {
+    "success": { "type": "boolean" },
+    "youtubeUrl": { "type": "string" },
+    "videoId": { "type": "string" },
+    "transcript": { "type": "string" },
+    "provider": {
       "type": "string",
-      "title": "Transcripts",
-      "description": "Complete transcripts extracted from YouTube videos",
-      "template": "{{links.apiDefaultDatasetUrl}}/items"
-    }
-  }
+      "enum": ["youtube-transcript", "openrouter"]
+    },
+    "language": { "type": "string" },
+    "usage": { "type": "object" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "error": { "type": "string" },
+    "details": { "type": "string" }
+  },
+  "required": ["success", "youtubeUrl", "generatedAt"]
 }
