@@ -1,4 +1,5 @@
 {
+  "actorOutputSchemaVersion": 1,
   "title": "YouTube Transcriber Output",
   "type": "object",
   "properties": {
