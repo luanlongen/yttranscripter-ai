@@ -16,7 +16,7 @@ beforeEach(() => {
 describe("splitAudioByTime", () => {
   it("returns [audioPath] when duration is shorter than segmentMinutes", async () => {
     const { execFile } = await import("child_process")
-    ;(execFile as any).mockImplementation((cmd, args, cb) => {
+    ;(execFile as any).mockImplementation((_cmd: string, _args: string[], cb: Function) => {
       cb(null, "120", "")
     })
 
@@ -28,7 +28,7 @@ describe("splitAudioByTime", () => {
   it("splits audio when duration exceeds segmentMinutes", async () => {
     const { execFile, spawn } = await import("child_process")
     const { readdirSync } = await import("fs")
-    ;(execFile as any).mockImplementation((cmd, args, cb) => {
+    ;(execFile as any).mockImplementation((_cmd: string, _args: string[], cb: Function) => {
       cb(null, "600", "")
     })
     ;(spawn as any).mockImplementation(() => {
@@ -49,7 +49,7 @@ describe("splitAudioByTime", () => {
 
   it("returns [audioPath] as fallback when ffmpeg fails", async () => {
     const { execFile, spawn } = await import("child_process")
-    ;(execFile as any).mockImplementation((cmd, args, cb) => {
+    ;(execFile as any).mockImplementation((_cmd: string, _args: string[], cb: Function) => {
       cb(null, "600", "")
     })
     ;(spawn as any).mockImplementation(() => {

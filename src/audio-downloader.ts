@@ -90,11 +90,11 @@ async function downloadViaYtdlp(
   try {
     const { code, stderr } = await spawnAsync(ytDlpPath, args, timeoutMs)
     if (code !== 0) {
-      log("erro", `yt-dlp exit ${code}: ${stderr}`)
+      log("error", `yt-dlp exit ${code}: ${stderr}`)
       return false
     }
   } catch (err) {
-    log("erro", `yt-dlp falhou: ${err instanceof Error ? err.message : String(err)}`)
+    log("error", `yt-dlp falhou: ${err instanceof Error ? err.message : String(err)}`)
     return false
   }
   if (fs.existsSync(audioPath)) return true
