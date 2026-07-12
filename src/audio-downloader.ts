@@ -11,6 +11,7 @@ export interface DownloadOptions {
   userAgent?: string
   ytDlpPath?: string
   ytDlpTimeoutMs?: number
+  proxyUrl?: string
 }
 
 const DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -85,7 +86,8 @@ async function downloadViaYtdlp(
   audioPath: string,
   userAgent: string,
   ytDlpPath: string,
-  timeoutMs: number
+  timeoutMs: number,
+  proxyUrl?: string
 ): Promise<boolean> {
   const args = [
     "-m", "yt_dlp",
@@ -96,8 +98,9 @@ async function downloadViaYtdlp(
     "--js-runtimes", "node",
     "--extractor-args", "youtube:player_client=android,web_creator,ios",
     "--user-agent", userAgent,
-    url,
   ]
+  if (proxyUrl) args.push("--proxy", proxyUrl)
+  args.push(url)
   try {
     const { code, stderr } = await spawnAsync(ytDlpPath, args, timeoutMs)
     if (code !== 0) {
@@ -132,7 +135,7 @@ export async function downloadAudio(url: string, opts: DownloadOptions): Promise
   if (!downloaded) {
     if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath)
     log("info", "Tentando fallback yt-dlp...")
-    const ytDlpOk = await downloadViaYtdlp(url, base, audioPath, userAgent, ytDlpPath, timeoutMs)
+    const ytDlpOk = await downloadViaYtdlp(url, base, audioPath, userAgent, ytDlpPath, timeoutMs, opts.proxyUrl)
     if (!ytDlpOk) {
       return { error: "Failed to download audio", details: "ytdl-core and yt-dlp both failed" }
     }

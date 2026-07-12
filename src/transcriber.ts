@@ -82,7 +82,7 @@ export async function transcribeYoutubeUrl(
 
   log("info", "Legendas não disponíveis. Baixando áudio para OpenRouter...")
 
-  const download = await downloadAudio(url, { tmpDir: os.tmpdir() })
+  const download = await downloadAudio(url, { tmpDir: os.tmpdir(), proxyUrl: config.proxyUrl })
   if ("error" in download) {
     return {
       success: false,
