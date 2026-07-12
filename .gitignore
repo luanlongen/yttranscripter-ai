@@ -26,6 +26,9 @@ temp/
 .DS_Store
 Thumbs.db
 
+# Storage
+storage/
+
 # Editor files
 .vscode/
 .idea/
