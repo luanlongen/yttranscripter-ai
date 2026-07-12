@@ -107,6 +107,35 @@ export async function fetchCaptions(
   const maxRetries = opts.maxRetriesPerLanguage ?? DEFAULT_RETRIES
   const retryDelay = opts.retryDelayMs ?? DEFAULT_DELAY_MS
 
+  // Primeiro: tentar youtube-transcript (npm package) sem proxy
+  // Esta package funciona bem da maioria dos IPs para acessar legendas
+  try {
+    const { YoutubeTranscript } = await import("youtube-transcript")
+    for (const lang of [...languages, undefined]) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const options = lang
+            ? { lang, requestOptions: { headers: { "User-Agent": DEFAULT_UA } } }
+            : { requestOptions: { headers: { "User-Agent": DEFAULT_UA } } }
+          const segments = await YoutubeTranscript.fetchTranscript(videoId, options)
+          if (segments && segments.length > 0) {
+            const transcript = (segments as Array<{ text: string }>).map(s => s.text.trim()).join(" ")
+            log("info", `youtube-transcript funcionou${lang ? ` (idioma: ${lang})` : ""}`)
+            return { transcript, language: lang }
+          }
+        } catch {
+          if (attempt < maxRetries) await new Promise(r => setTimeout(r, retryDelay))
+        }
+      }
+    }
+  } catch {
+    log("warn", "youtube-transcript package não disponível")
+  }
+
+  // Segundo: tentar manual com proxy (se disponível)
+  if (!proxyUrl) return null
+
+  log("info", "Tentando fetch manual com proxy...")
   let tracks: CaptionTrack[] = []
   let lastError = ""
 

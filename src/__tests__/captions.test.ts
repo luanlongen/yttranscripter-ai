@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { fetchCaptions } from "../captions.js"
+
+// Mock youtube-transcript to force fallback to manual implementation
+vi.mock("youtube-transcript", () => ({
+  YoutubeTranscript: { fetchTranscript: vi.fn().mockRejectedValue(new Error("not available")) },
+}))
 
 const mockWatchHtml = (captionTracks: any[]) => `
 <html><script>
@@ -13,6 +17,8 @@ const mockTimedtextJson = (events: any[]) => ({
   events: events.map(ev => ({ segs: [{ utf8: ev.text }] })),
 })
 
+const DEFAULT_PROXY = "http://proxy:8000"
+
 beforeEach(() => {
   vi.unstubAllGlobals()
 })
@@ -24,14 +30,13 @@ describe("fetchCaptions", () => {
       text: () => Promise.resolve("<html><body>no player response</body></html>"),
     }))
 
-    const result = await fetchCaptions("dQw4w9WgXcQ", {})
+    const { fetchCaptions } = await import("../captions.js")
+    const result = await fetchCaptions("dQw4w9WgXcQ", { maxRetriesPerLanguage: 1, proxyUrl: DEFAULT_PROXY })
     expect(result).toBeNull()
   })
 
   it("returns caption when track is available for requested language", async () => {
-    let fetchCallCount = 0
     vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      fetchCallCount++
       if (url.includes("/watch?v=")) {
         return Promise.resolve({
           ok: true,
@@ -46,7 +51,8 @@ describe("fetchCaptions", () => {
       })
     }))
 
-    const result = await fetchCaptions("dQw4w9WgXcQ", { languages: ["pt"] })
+    const { fetchCaptions } = await import("../captions.js")
+    const result = await fetchCaptions("dQw4w9WgXcQ", { languages: ["pt"], maxRetriesPerLanguage: 1, proxyUrl: DEFAULT_PROXY })
     expect(result).not.toBeNull()
     expect(result?.transcript).toContain("Olá")
     expect(result?.language).toBe("pt")
@@ -68,13 +74,16 @@ describe("fetchCaptions", () => {
       })
     }))
 
-    const result = await fetchCaptions("dQw4w9WgXcQ", { languages: ["pt", "en"] })
+    const { fetchCaptions } = await import("../captions.js")
+    const result = await fetchCaptions("dQw4w9WgXcQ", { languages: ["pt", "en"], maxRetriesPerLanguage: 1, proxyUrl: DEFAULT_PROXY })
     expect(result?.language).toBe("en")
   })
 
   it("returns null when fetch fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")))
-    const result = await fetchCaptions("dQw4w9WgXcQ", { languages: ["pt"], maxRetriesPerLanguage: 1 })
+
+    const { fetchCaptions } = await import("../captions.js")
+    const result = await fetchCaptions("dQw4w9WgXcQ", { languages: ["pt"], maxRetriesPerLanguage: 1, proxyUrl: DEFAULT_PROXY })
     expect(result).toBeNull()
   })
 })
