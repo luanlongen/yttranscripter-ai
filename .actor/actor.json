@@ -18,35 +18,41 @@
       "youtubeUrl": {
         "title": "YouTube URL",
         "type": "string",
+        "description": "Full YouTube URL or short link (youtube.com, youtu.be, etc.)",
         "editor": "textfield",
         "example": "https://www.youtube.com/watch?v=zw_e_vVTq4Y"
       },
       "openRouterApiKey": {
         "title": "OpenRouter API Key",
         "type": "string",
+        "description": "Your OpenRouter API key for Whisper transcription",
         "editor": "hidden",
         "isSecret": true
       },
       "openRouterModel": {
         "title": "OpenRouter Model",
         "type": "string",
+        "description": "Whisper model to use. Defaults to openai/whisper-large-v3",
         "editor": "textfield",
         "example": "openai/whisper-large-v3"
       },
       "language": {
         "title": "Language",
         "type": "string",
+        "description": "Language code (e.g. pt, en, es). Default: pt",
         "editor": "textfield",
         "example": "pt"
       },
       "segmentMinutes": {
         "title": "Audio Segment Length (minutes)",
         "type": "integer",
+        "description": "Audio segment length for Whisper (1-30). Default: 5",
         "editor": "number"
       },
       "useProxy": {
         "title": "Use Residential Proxy",
         "type": "boolean",
+        "description": "Fetch captions through Apify residential proxy",
         "editor": "checkbox"
       }
     },
