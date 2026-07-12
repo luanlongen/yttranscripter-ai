@@ -42,8 +42,8 @@ function spawnAsync(
   })
 }
 
-async function downloadViaYtdlCore(url: string, audioPath: string, userAgent: string): Promise<boolean> {
-  return new Promise<boolean>(resolve => {
+async function downloadViaYtdlCore(url: string, audioPath: string, userAgent: string, timeoutMs = 120000): Promise<boolean> {
+  const downloadPromise = new Promise<boolean>(resolve => {
     const stream = ytdl(url, {
       filter: "audioonly",
       quality: "lowestaudio",
@@ -68,6 +68,15 @@ async function downloadViaYtdlCore(url: string, audioPath: string, userAgent: st
       resolve(false)
     })
   })
+
+  const timeoutPromise = new Promise<boolean>(resolve => {
+    setTimeout(() => {
+      log("warn", `ytdl-core timeout após ${timeoutMs}ms`)
+      resolve(false)
+    }, timeoutMs)
+  })
+
+  return Promise.race([downloadPromise, timeoutPromise])
 }
 
 async function downloadViaYtdlp(
