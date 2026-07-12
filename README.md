@@ -1,244 +1,115 @@
-# YouTube Transcriber Server
+# YouTube Transcriber
 
-Servidor HTTP em Node.js para transcrever vídeos do YouTube com autenticação Bearer.
+Apify Actor que extrai transcrições de vídeos do YouTube. Primeiro tenta obter legendas disponíveis, depois baixa o áudio e transcreve via OpenRouter Whisper como fallback.
 
-Ele tenta primeiro as legendas do próprio YouTube. Se não houver transcrição disponível, baixa o áudio com `yt-dlp` e envia para o OpenRouter usando `openai/whisper-large-v3`.
+## Fluxo
 
-## Destaques
-
-- `POST /transcribe` com `Authorization: Bearer <sua-chave>`.
-- Fallback automático entre `youtube-transcript` e OpenRouter.
-- Resposta em JSON com `provider`, `method`, `generatedAt` e, quando o provedor for OpenRouter, `usage`.
-- `GET /health` para health check em Coolify, Docker e balanceadores.
-- Pronto para rodar com `npm`, Docker ou Docker Compose.
-
-## Como funciona
-
-```mermaid
-flowchart TD
-  A[POST /transcribe] --> B{Bearer válido?}
-  B -- não --> C[401 Unauthorized]
-  B -- sim --> D{URL válida?}
-  D -- não --> E[400 Bad Request]
-  D -- sim --> F{Legendas do YouTube disponíveis?}
-  F -- sim --> G[Retorna provider youtube-transcript]
-  F -- não --> H[Baixa áudio com yt-dlp]
-  H --> I[Envia ao OpenRouter]
-  I --> J[Retorna provider openrouter + usage]
+```
+Input (youtubeUrl)
+  → Extrair videoId
+  → Buscar legendas via YouTube timedtext (com opção de proxy residencial)
+    → Se encontrar → Retorna transcrição (rápido, gratuito)
+    → Se não encontrar → Baixar áudio via ytdl-core / yt-dlp
+      → Dividir áudio em segmentos via ffmpeg
+      → Transcrever cada segmento via OpenRouter Whisper
+      → Retornar transcrição concatenada
 ```
 
-## Requisitos
+## Input
 
-- Node.js 18+.
-- `yt-dlp` instalado no sistema ou dentro do container.
-- `ffmpeg` disponível para o fluxo de áudio.
-- Uma `AUTH_BEARER_KEY` para proteger a rota.
-- Uma `OPENROUTER_API_KEY` para o fallback de transcrição por áudio.
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| youtubeUrl | string | Sim | URL completa do YouTube (youtube.com, youtu.be, shorts, embed) |
+| openRouterApiKey | string | Não | API key do OpenRouter. Necessário se o vídeo não tiver legendas |
+| openRouterModel | string | Não | Modelo Whisper. Default: openai/whisper-large-v3 |
+| language | string | Não | Idioma para legendas e Whisper. Default: pt |
+| segmentMinutes | integer | Não | Duração dos segmentos de áudio (1-30 min). Default: 5 |
+| useProxy | boolean | Não | Usar proxy residencial Apify para buscar legendas. Default: false |
 
-## Instalação
+## Output (sucesso - legendas do YouTube)
+
+```json
+{
+  "success": true,
+  "youtubeUrl": "https://www.youtube.com/watch?v=...",
+  "videoId": "...",
+  "transcript": "Conteúdo completo da transcrição...",
+  "provider": "youtube-transcript",
+  "language": "pt",
+  "generatedAt": "2026-01-01T10:00:00.000Z"
+}
+```
+
+## Output (sucesso - OpenRouter Whisper)
+
+```json
+{
+  "success": true,
+  "youtubeUrl": "https://www.youtube.com/watch?v=...",
+  "videoId": "...",
+  "transcript": "Conteúdo completo da transcrição...",
+  "provider": "openrouter",
+  "usage": { "input_tokens": 1234, "output_tokens": 567 },
+  "generatedAt": "2026-01-01T10:00:00.000Z"
+}
+```
+
+## Output (erro)
+
+```json
+{
+  "success": false,
+  "youtubeUrl": "...",
+  "error": "Descrição do erro",
+  "details": "Detalhes adicionais (se disponível)",
+  "generatedAt": "..."
+}
+```
+
+## Como rodar localmente
 
 ```bash
+# Instalar dependências
 npm install
-```
 
-Crie um arquivo `.env` na raiz do projeto com este formato:
+# Executar uma vez (precisa de storage/key_value_stores/default/INPUT.json)
+npm run start
 
-```env
-PORT=6969
-AUTH_BEARER_KEY=troque-esta-chave
-OPENROUTER_API_KEY=sua-chave-openrouter
-OPENROUTER_MODEL=openai/whisper-large-v3
-```
-
-## Rodando localmente
-
-```bash
+# Modo desenvolvimento com hot reload
 npm run dev
 ```
 
-O servidor sobe em `http://localhost:6969`.
-
-## Health Check
-
-Use esta rota para o Coolify ou para monitoramento simples:
-
-```http
-GET /health
-```
-
-Resposta:
-
-```json
-{
-  "ok": true,
-  "details": "Server running"
-}
-```
-
-## API
-
-### `POST /transcribe`
-
-Headers obrigatórios:
-
-```http
-Authorization: Bearer <sua-chave>
-Content-Type: application/json
-Accept: application/json
-```
-
-Body mínimo:
-
-```json
-{
-  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-}
-```
-
-Body com idioma para o OpenRouter:
-
-```json
-{
-  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "language_openrouter": "pt"
-}
-```
-
-Se quiser baixar o JSON como arquivo, use `?download=true` na URL ou envie `download: true` no body.
-
-## Resposta de sucesso
-
-O retorno tem dois formatos possíveis, dependendo do provedor usado.
-
-### Quando vier de legendas do YouTube
-
-```json
-{
-  "ok": true,
-  "videoId": "dQw4w9WgXcQ",
-  "sourceUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "provider": "youtube-transcript",
-  "method": "youtube-transcript",
-  "transcript": "texto completo da transcrição",
-  "language": "pt",
-  "generatedAt": "2026-05-25T12:34:56.000Z"
-}
-```
-
-### Quando vier do OpenRouter
-
-```json
-{
-  "ok": true,
-  "videoId": "dQw4w9WgXcQ",
-  "sourceUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "provider": "openrouter",
-  "method": "openrouter",
-  "transcript": "texto completo da transcrição",
-  "usage": {
-    "input_tokens": 123,
-    "output_tokens": 456,
-    "total_tokens": 579
-  },
-  "generatedAt": "2026-05-25T12:34:56.000Z"
-}
-```
-
-## Resposta de erro
-
-```json
-{
-  "ok": false,
-  "error": "URL inválida ou não reconhecida: invalid"
-}
-```
-
-Alguns erros também podem incluir `details`.
-
-## Exemplo com `curl`
+## Como publicar na Apify
 
 ```bash
-curl -X POST "http://localhost:6969/transcribe" \
-  -H "Authorization: Bearer teste" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","language_openrouter":"pt"}'
+# Instalar Apify CLI
+npm install -g apify
+
+# Login
+apify login
+
+# Publicar
+apify push
 ```
 
-Para baixar como arquivo:
+## Proxy Residencial
 
-```bash
-curl -X POST "http://localhost:6969/transcribe?download=true" \
-  -H "Authorization: Bearer teste" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"}' \
-  -o transcription.json
-```
+O campo `useProxy` ativa o proxy residencial da Apify para buscar legendas do YouTube. Isso ajuda a evitar bloqueios do Google quando o Actor roda em IPs de datacenter.
+
+- **Custo:** O tráfego do proxy é cobrado por GB na sua conta da Apify (aproximadamente US$ 2-4/mês para 1000 transcrições)
+- **Áudio nunca usa proxy:** O download de áudio sempre usa conexão direta (CDN do YouTube tolera IPs de datacenter, e proxy residencial seria caro para tráfego de áudio)
+- **Self-host fora da Apify:** Se rodar em AWS EC2/Lightsail, você precisará de sua própria solução de proxy (BrightData, Smartproxy, Oxylabs) ou o fallback Whisper continuará funcionando
+
+## Limitações
+
+- IPs de datacenter podem ser bloqueados pelo YouTube ao buscar legendas sem proxy ativado
+- Vídeos muito longos (>2h) são divididos em segmentos de N minutos para transcrição via Whisper
+- Vídeos com restrição de idade ou região podem não ter legendas disponíveis
+- Requer ffmpeg e python3 + yt-dlp instalados (já incluso no Dockerfile)
 
 ## Docker
 
-### Build e execução
-
 ```bash
 docker build -t yt-transcriber .
-docker run --rm -p 6969:6969 --env-file .env yt-transcriber
+docker run --rm -e OPENROUTER_API_KEY=xxx yt-transcriber
 ```
-
-### Docker Compose
-
-```bash
-docker compose up --build
-```
-
-O Compose já expõe a porta `6969` e lê o arquivo `.env` da raiz.
-
-## Coolify
-
-Você pode subir este projeto no Coolify usando o repositório direto.
-
-### Opção recomendada
-
-- Use o `Dockerfile` existente.
-- Configure a porta interna como `6969`.
-- Adicione as variáveis de ambiente no painel do Coolify.
-- Aponte o health check para `GET /health`.
-
-### Variáveis necessárias
-
-- `AUTH_BEARER_KEY`
-- `OPENROUTER_API_KEY`
-- `OPENROUTER_MODEL` opcional
-- `PORT` opcional, padrão `6969`
-
-## Observações importantes
-
-- A rota aceita no máximo `1 MB` no corpo da requisição, o suficiente para enviar a URL e parâmetros.
-- O retorno pode ser grande se a transcrição for longa, mas a API responde em JSON normal.
-- Se a legenda do YouTube estiver disponível, o OpenRouter não é usado.
-- Se a transcrição cair no OpenRouter, o campo `usage` vem no retorno.
-
-## Estrutura do projeto
-
-```text
-.
-├── Dockerfile
-├── docker-compose.yml
-├── package.json
-├── README.md
-├── src/
-│   └── yt.ts
-└── tsconfig.json
-```
-
-## Scripts
-
-```bash
-npm run dev
-npm run start
-npm run typecheck
-```
-
-## Licença
-
-ISC
