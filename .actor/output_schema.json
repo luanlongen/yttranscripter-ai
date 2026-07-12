@@ -1,21 +1,58 @@
 {
   "actorOutputSchemaVersion": 1,
   "title": "YouTube Transcriber Output",
-  "type": "object",
   "properties": {
-    "success": { "type": "boolean" },
-    "youtubeUrl": { "type": "string" },
-    "videoId": { "type": "string" },
-    "transcript": { "type": "string" },
-    "provider": {
-      "type": "string",
-      "enum": ["youtube-transcript", "openrouter"]
+    "success": {
+      "title": "Success",
+      "type": "boolean",
+      "template": "{{success}}"
     },
-    "language": { "type": "string" },
-    "usage": { "type": "object" },
-    "generatedAt": { "type": "string", "format": "date-time" },
-    "error": { "type": "string" },
-    "details": { "type": "string" }
+    "youtubeUrl": {
+      "title": "YouTube URL",
+      "type": "string",
+      "template": "{{youtubeUrl}}"
+    },
+    "videoId": {
+      "title": "Video ID",
+      "type": "string",
+      "template": "{{videoId}}"
+    },
+    "transcript": {
+      "title": "Transcript",
+      "type": "string",
+      "template": "{{transcript}}"
+    },
+    "provider": {
+      "title": "Provider",
+      "type": "string",
+      "enum": ["youtube-transcript", "openrouter"],
+      "template": "{{provider}}"
+    },
+    "language": {
+      "title": "Language",
+      "type": "string",
+      "template": "{{language}}"
+    },
+    "usage": {
+      "title": "Usage",
+      "type": "object",
+      "template": "{{usage}}"
+    },
+    "generatedAt": {
+      "title": "Generated At",
+      "type": "string",
+      "template": "{{generatedAt}}"
+    },
+    "error": {
+      "title": "Error",
+      "type": "string",
+      "template": "{{error}}"
+    },
+    "details": {
+      "title": "Details",
+      "type": "string",
+      "template": "{{details}}"
+    }
   },
   "required": ["success", "youtubeUrl", "generatedAt"]
 }
