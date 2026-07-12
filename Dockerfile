@@ -1,25 +1,15 @@
 FROM apify/actor-node:20
 
-# Install Python3, pip, and yt-dlp for audio download fallback
 RUN apk add --no-cache python3 py3-pip ffmpeg \
     && pip3 install --break-system-packages -U yt-dlp
 
-# Copy package files and TypeScript config
-COPY package*.json tsconfig.json ./
-
-# Install all dependencies including dev for TypeScript compilation
+COPY package*.json ./
 RUN npm ci --include=dev
 
-# Copy source code
-COPY . ./
-
-# Build TypeScript
+COPY tsconfig.json ./
+COPY src/ ./src/
 RUN npm run build
 
-# Remove dev dependencies to reduce image size
-RUN npm prune --omit=dev \
-    && echo "Production dependencies:" \
-    && npm list --all --depth=0 --omit=dev
+RUN npm prune --omit=dev
 
-# Run the actor
-CMD npm start
+CMD ["npm", "start"]
