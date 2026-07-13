@@ -14,7 +14,7 @@
     "openRouterApiKey": {
       "title": "OpenRouter API Key",
       "type": "string",
-      "editor": "hidden",
+      "editor": "textfield",
       "isSecret": true,
       "description": "Your OpenRouter API key for Whisper transcription fallback. Required if video has no captions. Get it from https://openrouter.ai/keys"
     },
