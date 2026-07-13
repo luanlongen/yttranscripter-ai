@@ -4,7 +4,7 @@
   "properties": {
     "success": {
       "title": "Success",
-      "type": "boolean",
+      "type": "string",
       "template": "{{success}}"
     },
     "youtubeUrl": {
@@ -25,18 +25,12 @@
     "provider": {
       "title": "Provider",
       "type": "string",
-      "enum": ["youtube-transcript", "openrouter"],
       "template": "{{provider}}"
     },
     "language": {
       "title": "Language",
       "type": "string",
       "template": "{{language}}"
-    },
-    "usage": {
-      "title": "Usage",
-      "type": "object",
-      "template": "{{usage}}"
     },
     "generatedAt": {
       "title": "Generated At",

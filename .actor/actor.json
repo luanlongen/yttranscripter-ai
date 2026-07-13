@@ -58,5 +58,6 @@
     },
     "required": ["youtubeUrl"]
   },
+  "output": "./output_schema.json",
   "platform": ["NODEJS"]
 }
