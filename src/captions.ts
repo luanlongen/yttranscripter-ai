@@ -107,23 +107,19 @@ export async function fetchCaptions(
   const maxRetries = opts.maxRetriesPerLanguage ?? DEFAULT_RETRIES
   const retryDelay = opts.retryDelayMs ?? DEFAULT_DELAY_MS
 
-  // Se proxy foi fornecido, configurar dispatcher global ANTES de qualquer fetch
-  // Isso faz o youtube-transcript (e qualquer outro fetch) usar o proxy
-  if (proxyUrl) {
-    const agent = new ProxyAgent({ uri: proxyUrl })
-    setGlobalDispatcher(agent)
-    log("info", "Proxy configurado globalmente para requests")
-  }
+  // Tentar youtube-transcript (npm package)
+  // Se proxyUrl foi fornecido, passar fetch customizado que usa o proxy
+  const customFetch = proxyUrl
+    ? (url: string, opts?: any) => fetch(url, { ...opts, dispatcher: new ProxyAgent({ uri: proxyUrl }) })
+    : undefined
 
-  // Tentar youtube-transcript (npm package) - vai usar proxy se configurado
   try {
     const { YoutubeTranscript } = await import("youtube-transcript")
     for (const lang of [...languages, undefined]) {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          const options = lang
-            ? { lang, requestOptions: { headers: { "User-Agent": DEFAULT_UA } } }
-            : { requestOptions: { headers: { "User-Agent": DEFAULT_UA } } }
+          const options: any = { lang }
+          if (customFetch) options.fetch = customFetch
           const segments = await YoutubeTranscript.fetchTranscript(videoId, options)
           if (segments && segments.length > 0) {
             const transcript = (segments as Array<{ text: string }>).map(s => s.text.trim()).join(" ")
