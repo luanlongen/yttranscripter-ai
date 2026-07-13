@@ -107,8 +107,15 @@ export async function fetchCaptions(
   const maxRetries = opts.maxRetriesPerLanguage ?? DEFAULT_RETRIES
   const retryDelay = opts.retryDelayMs ?? DEFAULT_DELAY_MS
 
-  // Primeiro: tentar youtube-transcript (npm package) sem proxy
-  // Esta package funciona bem da maioria dos IPs para acessar legendas
+  // Se proxy foi fornecido, configurar dispatcher global ANTES de qualquer fetch
+  // Isso faz o youtube-transcript (e qualquer outro fetch) usar o proxy
+  if (proxyUrl) {
+    const agent = new ProxyAgent({ uri: proxyUrl })
+    setGlobalDispatcher(agent)
+    log("info", "Proxy configurado globalmente para requests")
+  }
+
+  // Tentar youtube-transcript (npm package) - vai usar proxy se configurado
   try {
     const { YoutubeTranscript } = await import("youtube-transcript")
     for (const lang of [...languages, undefined]) {
@@ -132,10 +139,10 @@ export async function fetchCaptions(
     log("warn", "youtube-transcript package não disponível")
   }
 
-  // Segundo: tentar manual com proxy (se disponível)
+  // Se youtube-transcript falhou E tem proxy, tentar fetch manual do timedtext
   if (!proxyUrl) return null
 
-  log("info", "Tentando fetch manual com proxy...")
+  log("info", "Tentando fetch manual do timedtext com proxy...")
   let tracks: CaptionTrack[] = []
   let lastError = ""
 
@@ -165,7 +172,7 @@ export async function fetchCaptions(
   try {
     const transcript = await downloadTrack(selected.track, proxyUrl)
     if (!transcript) return null
-    log("info", `Legenda obtida (idioma: ${selected.lang})`)
+    log("info", `Legenda obtida via fetch manual (idioma: ${selected.lang})`)
     return { transcript, language: selected.lang }
   } catch (err) {
     log("warn", `downloadTrack falhou: ${err instanceof Error ? err.message : String(err)}`)
