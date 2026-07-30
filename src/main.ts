@@ -47,7 +47,6 @@ async function main(): Promise<void> {
       }
     } else {
       log("error", `Transcrição falhou: ${result.error}`)
-      process.exit(1)
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
@@ -73,8 +72,6 @@ async function main(): Promise<void> {
     } catch {
       // ignore
     }
-
-    process.exit(1)
   }
 
   await Actor.exit()

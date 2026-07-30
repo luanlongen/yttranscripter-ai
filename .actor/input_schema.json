@@ -2,6 +2,11 @@
   "title": "YouTube Transcriber Input",
   "type": "object",
   "schemaVersion": 1,
+  "prefill": {
+    "youtubeUrl": "https://www.youtube.com/watch?v=zw_e_vVTq4Y",
+    "language": "pt",
+    "segmentMinutes": 5
+  },
   "properties": {
     "youtubeUrl": {
       "title": "YouTube URL",
